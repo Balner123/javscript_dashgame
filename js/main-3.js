@@ -1,16 +1,15 @@
 let asteroids = [];
 let spaceShip;
+let sword;
 
 class SpaceShip {
   constructor(posX, posY) {
     this.x = posX;
     this.y = posY;
     this.w = 30;
-    this.h = 40;
     this.v = 15;
     this.angle = 0;
     this.b = 50;
-    this.end = 0;
   }
 
   move() {
@@ -42,20 +41,61 @@ class SpaceShip {
     this.move();
     this.rotate();
     fill('#ff00ff');
+  
     rectMode(CENTER);
     push();
     translate(this.x, this.y);
-    rotate(((2 * PI) / 360) * this.angle);
-    rect(0, 0, this.w, this.h, 0, 0);
+    rotate(radians(this.angle));
+    circle(0, 0, this.w);
     pop();
+
+    
   }
 }
+
+class Sword {
+  constructor(spaceShip) {
+    this.spaceShip = spaceShip;
+    this.offset = 30;
+    this.radius = 50; // Poloměr kruhu
+    this.offsetX = 0;
+    this.offsetY = 0;
+  }
+
+  updateOffsets() {
+    this.offsetX = this.spaceShip.x + this.offset * Math.cos(radians(this.spaceShip.angle - 90));
+    this.offsetY = this.spaceShip.y + this.offset * Math.sin(radians(this.spaceShip.angle - 90));
+  
+  }
+  draw() {
+    this.updateOffsets();
+
+    fill('#00ff00');
+    noStroke(); // Bez obrysu pro kruh
+    ellipse(this.offsetX, this.offsetY, this.radius ); 
+
+    // Detekce kolize s asteroidem
+    asteroids.forEach(function (asteroid, idx, arr) {
+      if (collideCircleCircle(
+        this.offsetX,
+        this.offsetY,
+        this.radius ,
+        asteroid.x,
+        asteroid.y,
+        asteroid.size
+      )) {
+        arr.splice(idx, 1);
+      }
+    }.bind(this));
+  }
+}
+
 
 class Asteroid {
   constructor() {
     this.size = 40;
     let i = floor(random(1, 5));
-    this.ran = floor(random(8,40));
+    this.ran = floor(random(8, 40));
 
     switch (i) {
       case 1:
@@ -76,7 +116,7 @@ class Asteroid {
         break;
     }
 
-    this.speed = floor(random(8,15));
+    this.speed = floor(random(4, 8));
     this.angle = 0;
     this.radius = this.size / 2;
   }
@@ -88,10 +128,10 @@ class Asteroid {
           collideCircleCircle(
             asteroids[i].x,
             asteroids[i].y,
-            asteroids[i].radius*2,
+            asteroids[i].radius * 2,
             this.x,
             this.y,
-            this.radius*2
+            this.radius * 2
           )
         ) {
           let angleToOther = atan2(
@@ -102,7 +142,7 @@ class Asteroid {
 
           this.x -= 5 * Math.cos((newAngle - 90) * (PI / 180));
           this.y -= 5 * Math.sin((newAngle - 90) * (PI / 180));
-          return; // Došlo ke kolizi, zabraň pohybu
+          return;
         }
       }
     }
@@ -118,16 +158,16 @@ class Asteroid {
           collideCircleCircle(
             asteroids[i].x,
             asteroids[i].y,
-            asteroids[i].radius*2,
+            asteroids[i].radius * 2,
             this.x,
             this.y,
-            this.radius*2
+            this.radius * 2
           )
         ) {
           resetMatrix();
           let angleToCursor = atan2(spaceShip.y - this.y, spaceShip.x - this.x);
           this.angle = degrees(angleToCursor) + 180;
-          return; // Došlo ke kolizi, zabraň rotaci
+          return;
         }
       }
     }
@@ -150,13 +190,15 @@ class Asteroid {
 }
 
 function setup() {
-  canvas = createCanvas(displayWidth, displayHeight);
+  createCanvas(windowWidth, windowHeight);
   spaceShip = new SpaceShip(width / 2, height / 2);
+  sword = new Sword(spaceShip);
 }
 
 function draw() {
   background(0);
   spaceShip.draw();
+  sword.draw();
 
   if (frameCount % 20 == 0) {
     asteroids.push(new Asteroid());
@@ -164,11 +206,6 @@ function draw() {
 
   asteroids.forEach(function (asteroid, idx, arr) {
     asteroid.draw();
-    if (asteroid.y > height) {
-      arr.splice(idx, 1);
-    }
   });
 }
 
-setup();
-draw();
